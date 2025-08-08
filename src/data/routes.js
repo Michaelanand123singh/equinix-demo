@@ -5,12 +5,12 @@
 
 export const routes = {
   'A1': [
-    { x: 50, y: 500, instruction: "Start from main entrance" },
-    { x: 100, y: 500, instruction: "Walk towards reception" },
-    { x: 100, y: 400, instruction: "Turn left at reception" },
-    { x: 150, y: 400, instruction: "Continue down corridor" },
-    { x: 150, y: 200, instruction: "Turn right towards Zone A" },
-    { x: 200, y: 150, instruction: "Cabinet A1 reached!" }
+    { x: 235.238, y: 110.773, instruction: "Starting point" },
+    { x: 236.491, y: 79.910, instruction: "Walk towards & take right turn" },
+    { x: 246.949, y: 78.878, instruction: "Turn right again" },
+    { x: 246.850, y: 146.939, instruction: "Go straight & take a left turn" },
+    { x: 350.813, y: 146.665, instruction: "You've reached the destination" },
+    
   ],
   
   'B2': [
