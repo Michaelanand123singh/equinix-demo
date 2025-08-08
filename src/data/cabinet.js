@@ -1,33 +1,30 @@
-// src/data/cabinets.js
+// src/data/cabinets.js - Updated for React-Leaflet
+import { svgToLatLng } from './routes';
 
-// Cabinet locations and information
-// Adjust these coordinates to match your actual SVG floor plan
+// Updated cabinet locations with React-Leaflet coordinates
 export const cabinets = {
   'A1': {
     name: 'Cabinet A1',
     description: 'Server Rack - Network Equipment',
     zone: 'Zone A',
-    x: 200,  // X coordinate on your SVG
-    y: 150,  // Y coordinate on your SVG
+    coords: svgToLatLng(350.813, 146.665), // Destination coordinates from route
+    svgCoords: { x: 350.813, y: 146.665 }  // Keep original for reference
   },
   'B2': {
     name: 'Cabinet B2', 
     description: 'Storage Array - Database Servers',
     zone: 'Zone B',
-    x: 400,
-    y: 250,
+    coords: svgToLatLng(400, 250),
+    svgCoords: { x: 400, y: 250 }
   },
   'C3': {
     name: 'Cabinet C3',
     description: 'Power Distribution Unit',
-    zone: 'Zone C', 
-    x: 600,
-    y: 180,
+    zone: 'Zone C',
+    coords: svgToLatLng(600, 180),
+    svgCoords: { x: 600, y: 180 }
   }
 };
 
-// Helper function to get cabinet by ID
 export const getCabinet = (id) => cabinets[id];
-
-// Get all cabinet IDs
 export const getCabinetIds = () => Object.keys(cabinets);

@@ -1,16 +1,20 @@
-// src/components/NavigationView.jsx
+// src/components/NavigationView.jsx - Updated for React-Leaflet
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Target } from 'lucide-react';
-import UserPointer from './UserPointer';
-import RouteOverlay from './RouteOverlay';
+import LeafletMap from './LeafletMap';
 import useGPS from '../hooks/useGPS';
 import { cabinets } from '../data/cabinet';
-import { routes } from '../data/routes';
+import { getRouteCoords, getRoute } from '../data/routes';
 
 const NavigationView = ({ selectedCabinet, onBack }) => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [progress, setProgress] = useState(0);
   const { position, startTracking, stopTracking } = useGPS();
+
+  const routeCoords = getRouteCoords(selectedCabinet);
+  const route = getRoute(selectedCabinet);
+  const cabinet = cabinets[selectedCabinet];
+  const cabinetLocation = cabinet?.coords;
 
   useEffect(() => {
     if (isNavigating) {
@@ -24,15 +28,23 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
 
   // Calculate progress based on user position
   useEffect(() => {
-    if (position && routes[selectedCabinet]) {
-      const routePoints = routes[selectedCabinet];
-      const totalDistance = routePoints.length - 1;
-      
-      // Simple progress calculation (you can make this more sophisticated)
-      const currentProgress = Math.min((Date.now() % 10000) / 10000 * 100, 100);
-      setProgress(currentProgress);
+    if (position && routeCoords.length > 0) {
+      // Find closest waypoint to calculate progress
+      let closestIndex = 0;
+      let closestDistance = Infinity;
+
+      routeCoords.forEach((coord, index) => {
+        const distance = getDistanceBetweenPoints(position, coord);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      const calculatedProgress = (closestIndex / (routeCoords.length - 1)) * 100;
+      setProgress(Math.min(100, Math.max(0, calculatedProgress)));
     }
-  }, [position, selectedCabinet]);
+  }, [position, routeCoords]);
 
   const handleStartStop = () => {
     setIsNavigating(!isNavigating);
@@ -50,7 +62,7 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
           
           <div className="text-center">
             <h1 className="text-lg font-semibold">Navigating to</h1>
-            <p className="text-blue-400">{cabinets[selectedCabinet]?.name}</p>
+            <p className="text-blue-400">{cabinet?.name}</p>
           </div>
           
           <button
@@ -85,32 +97,30 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
       {/* Map Container */}
       <div className="p-4">
         <div className="max-w-6xl mx-auto bg-white rounded-lg overflow-hidden">
-          <div className="relative" style={{ height: '60vh' }}>
-            {/* SVG Floor Plan Background */}
-            <div className="absolute inset-0">
-              <object
-                data="/floor.svg"
-                type="image/svg+xml"
-                className="w-full h-full"
-                style={{ pointerEvents: 'none' }}
-              >
-                <img src="/floor.svg" alt="Floor Plan" className="w-full h-full object-contain" />
-              </object>
-            </div>
-            
-            {/* Route Overlay */}
-            <RouteOverlay selectedCabinet={selectedCabinet} />
-            
-            {/* User Position */}
-            {isNavigating && position && (
-              <UserPointer 
-                position={position} 
-                isNavigating={isNavigating}
-              />
-            )}
+          <div style={{ height: '60vh' }}>
+            <LeafletMap
+              showRoute={true}
+              routeCoords={routeCoords}
+              userPosition={position}
+              cabinetLocation={cabinetLocation}
+              cabinetName={cabinet?.name}
+              isNavigating={isNavigating}
+            />
           </div>
         </div>
       </div>
+
+      {/* Current Instruction */}
+      {isNavigating && route && (
+        <div className="max-w-6xl mx-auto px-4 mb-4">
+          <div className="bg-blue-600 rounded-lg p-4">
+            <h3 className="font-semibold mb-2">Next Instruction:</h3>
+            <p className="text-blue-100">
+              {route[Math.min(Math.floor(progress / 100 * route.length), route.length - 1)]?.instruction}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Status */}
       <div className="max-w-6xl mx-auto px-4">
@@ -125,7 +135,7 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
               </p>
               <p className="text-gray-400 text-sm">
                 {isNavigating 
-                  ? `Following route to ${cabinets[selectedCabinet]?.name}`
+                  ? `Following route to ${cabinet?.name}`
                   : 'Click "Start Navigation" to begin live tracking'
                 }
               </p>
@@ -135,6 +145,22 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
       </div>
     </div>
   );
+};
+
+// Helper function to calculate distance between two points
+const getDistanceBetweenPoints = (point1, point2) => {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = point1[0] * Math.PI / 180;
+  const φ2 = point2[0] * Math.PI / 180;
+  const Δφ = (point2[0] - point1[0]) * Math.PI / 180;
+  const Δλ = (point2[1] - point1[1]) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
 };
 
 export default NavigationView;

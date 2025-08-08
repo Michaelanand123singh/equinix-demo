@@ -1,38 +1,34 @@
-// src/hooks/useGPS.js
+// src/hooks/useGPS.js - Updated for React-Leaflet coordinates
 import { useState, useEffect, useCallback } from 'react';
-import { convertGPSToBuilding } from '../utils/gpsUtils';
+import { svgToLatLng } from '../data/routes';
 
 const useGPS = () => {
   const [position, setPosition] = useState(null);
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState(null);
 
-  // Simulated movement for demo purposes
-  // In real implementation, this would use actual GPS
+  // Simulated GPS tracking for demo (replace with real GPS)
   useEffect(() => {
     let interval;
     
     if (isTracking) {
-      // Start with a demo position
-      let currentPos = { x: 50, y: 500, heading: 0 };
+      // Start with entrance position in lat/lng format
+      let currentPos = svgToLatLng(50, 500); // Convert entrance SVG to lat/lng
       setPosition(currentPos);
       
       // Simulate movement every 2 seconds
       interval = setInterval(() => {
         setPosition(prev => {
-          if (!prev) return { x: 50, y: 500, heading: 0 };
+          if (!prev) return svgToLatLng(50, 500);
           
-          // Simple simulation: move slightly in random direction
-          const newX = prev.x + (Math.random() - 0.5) * 10;
-          const newY = prev.y + (Math.random() - 0.5) * 10;
-          const newHeading = prev.heading + (Math.random() - 0.5) * 0.2;
+          // Small random movement (very small for geographic coordinates)
+          const latOffset = (Math.random() - 0.5) * 0.00001;
+          const lngOffset = (Math.random() - 0.5) * 0.00001;
           
-          return {
-            x: Math.max(0, Math.min(800, newX)), // Keep within bounds
-            y: Math.max(0, Math.min(600, newY)),
-            heading: newHeading,
-            timestamp: Date.now()
-          };
+          return [
+            Math.max(28.4585, Math.min(28.4595, prev[0] + latOffset)),
+            Math.max(77.0256, Math.min(77.0266, prev[1] + lngOffset))
+          ];
         });
       }, 2000);
     }
@@ -42,7 +38,7 @@ const useGPS = () => {
     };
   }, [isTracking]);
 
-  // Real GPS implementation (commented out - use this for actual GPS)
+  // Real GPS implementation (uncomment for actual GPS tracking)
   /*
   useEffect(() => {
     let watchId;
@@ -56,19 +52,8 @@ const useGPS = () => {
       
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          const { latitude, longitude, heading } = position.coords;
-          
-          // Convert GPS to building coordinates
-          const buildingPos = convertGPSToBuilding(latitude, longitude);
-          
-          setPosition({
-            x: buildingPos.x,
-            y: buildingPos.y,
-            heading: heading || 0,
-            accuracy: position.coords.accuracy,
-            timestamp: position.timestamp
-          });
-          
+          const { latitude, longitude } = position.coords;
+          setPosition([latitude, longitude]);
           setError(null);
         },
         (error) => {
