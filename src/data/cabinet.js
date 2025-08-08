@@ -1,16 +1,15 @@
-// src/data/cabinet.js - Corrected cabinet locations
-import { svgToLatLng } from './routes';
+// src/data/cabinet.js - CLEANED - Only GPS coordinates for Leaflet
+// Remove SVG coordinate dependencies
 
-// Cabinet definitions with proper SVG coordinates
-// UPDATE THESE COORDINATES to match your actual SVG floor plan
+// Cabinet definitions with GPS coordinates only
+// UPDATE THESE COORDINATES to match your actual real-world cabinet locations
 export const cabinets = {
   'A1': {
     id: 'A1',
     name: 'Cabinet A1',
     description: 'Server Rack A1 - Primary Storage',
     zone: 'Zone A',
-    svgCoords: { x: 350.813, y: 143.876 }, // Measure these from your SVG
-    coords: svgToLatLng(350.813, 146.665),
+    coords: [28.4594, 77.0264], // Real GPS coordinates of Cabinet A1
     status: 'active',
     priority: 'high'
   },
@@ -20,8 +19,7 @@ export const cabinets = {
     name: 'Cabinet B2',
     description: 'Network Equipment Rack B2',
     zone: 'Zone B',
-    svgCoords: { x: 450, y: 150 }, // UPDATE: Measure from your SVG
-    coords: svgToLatLng(450, 150),
+    coords: [28.4593, 77.0263], // Real GPS coordinates of Cabinet B2
     status: 'active',
     priority: 'medium'
   },
@@ -31,8 +29,7 @@ export const cabinets = {
     name: 'Cabinet C3',
     description: 'Backup Server Rack C3',
     zone: 'Zone C',
-    svgCoords: { x: 700, y: 100 }, // UPDATE: Measure from your SVG
-    coords: svgToLatLng(700, 100),
+    coords: [28.4595, 77.0265], // Real GPS coordinates of Cabinet C3
     status: 'maintenance',
     priority: 'low'
   }
@@ -51,3 +48,36 @@ export const getCabinetsByZone = (zone) =>
 // Get cabinets by status
 export const getCabinetsByStatus = (status) => 
   Object.values(cabinets).filter(cabinet => cabinet.status === status);
+
+// Get cabinet coordinates for Leaflet
+export const getCabinetCoords = (cabinetId) => {
+  const cabinet = cabinets[cabinetId];
+  return cabinet ? cabinet.coords : null;
+};
+
+// Calculate distance to cabinet from user position
+export const getDistanceToCabinet = (userPosition, cabinetId) => {
+  const cabinetCoords = getCabinetCoords(cabinetId);
+  if (!userPosition || !cabinetCoords) return null;
+  
+  return haversineDistance(
+    userPosition[0], userPosition[1],
+    cabinetCoords[0], cabinetCoords[1]
+  );
+};
+
+// Haversine formula for distance calculation
+const haversineDistance = (lat1, lng1, lat2, lng2) => {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};

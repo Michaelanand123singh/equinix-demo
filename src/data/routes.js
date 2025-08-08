@@ -1,12 +1,14 @@
-// src/data/routes.js - Corrected coordinate mapping
-// SVG Configuration - These should match your actual SVG dimensions
+// src/data/routes.js - UPDATED with GPS to SVG coordinate mapping
+// This version supports BOTH Leaflet (GPS) and SVG coordinate systems
+
+// SVG Configuration - Match your actual SVG dimensions
 export const SVG_CONFIG = {
   width: 815.4284,
   height: 333.55614,
   viewBox: { x: 0, y: 0, width: 815.4284, height: 333.55614 }
 };
 
-// Geographic bounds for your building - These coordinates define the area where your SVG maps to
+// Geographic bounds for your building
 export const BUILDING_BOUNDS = {
   northEast: { lat: 28.4595, lng: 77.0266 }, // Top-right corner
   southWest: { lat: 28.4585, lng: 77.0256 }  // Bottom-left corner
@@ -18,75 +20,143 @@ export const BUILDING_CENTER = [
   (BUILDING_BOUNDS.northEast.lng + BUILDING_BOUNDS.southWest.lng) / 2
 ];
 
-// Coordinate conversion function - This converts SVG coordinates to geographic coordinates
-export const svgToLatLng = (x, y) => {
-  // Normalize SVG coordinates to 0-1 range
-  const normalizedX = x / SVG_CONFIG.width;
-  const normalizedY = y / SVG_CONFIG.height;
-  
-  // Convert to geographic coordinates
-  // SVG: (0,0) is top-left, Y increases downward
-  // Geographic: latitude increases upward
-  const lat = BUILDING_BOUNDS.northEast.lat - 
-    normalizedY * (BUILDING_BOUNDS.northEast.lat - BUILDING_BOUNDS.southWest.lat);
-  
-  const lng = BUILDING_BOUNDS.southWest.lng + 
-    normalizedX * (BUILDING_BOUNDS.northEast.lng - BUILDING_BOUNDS.southWest.lng);
-  
-  return [lat, lng]; // Return as [lat, lng] array for Leaflet
+// REFERENCE POINT MAPPING
+// Map known GPS coordinate to known SVG coordinate
+export const REFERENCE_POINTS = {
+  // GPS coordinate [28.4590, 77.0260] maps to SVG coordinate [235.238, 110.773]
+  gps: [28.4590, 77.0260],
+  svg: [235.238, 110.773]
 };
 
-// Reverse conversion function - Convert geographic coordinates back to SVG
-export const latLngToSvg = (lat, lng) => {
-  // Calculate normalized position within building bounds
-  const normalizedX = (lng - BUILDING_BOUNDS.southWest.lng) / 
-    (BUILDING_BOUNDS.northEast.lng - BUILDING_BOUNDS.southWest.lng);
+// Convert GPS coordinates to SVG coordinates
+export const gpsToSvg = (lat, lng) => {
+  // Calculate the scale factor based on building bounds and SVG dimensions
+  const latRange = BUILDING_BOUNDS.northEast.lat - BUILDING_BOUNDS.southWest.lat;
+  const lngRange = BUILDING_BOUNDS.northEast.lng - BUILDING_BOUNDS.southWest.lng;
   
-  const normalizedY = (BUILDING_BOUNDS.northEast.lat - lat) / 
-    (BUILDING_BOUNDS.northEast.lat - BUILDING_BOUNDS.southWest.lat);
+  // Calculate the offset from reference point
+  const latOffset = lat - REFERENCE_POINTS.gps[0];
+  const lngOffset = lng - REFERENCE_POINTS.gps[1];
   
-  // Convert to SVG coordinates
-  const x = normalizedX * SVG_CONFIG.width;
-  const y = normalizedY * SVG_CONFIG.height;
+  // Convert offset to SVG scale
+  const svgLatScale = SVG_CONFIG.height / latRange;
+  const svgLngScale = SVG_CONFIG.width / lngRange;
   
-  return { x, y };
+  // Calculate SVG position
+  // Note: SVG Y increases downward, GPS latitude increases upward
+  const svgX = REFERENCE_POINTS.svg[0] + (lngOffset * svgLngScale);
+  const svgY = REFERENCE_POINTS.svg[1] - (latOffset * svgLatScale); // Subtract because Y is inverted
+  
+  return { x: svgX, y: svgY };
 };
 
-// CORRECTED ROUTES - Update these with your actual SVG coordinates
-// These coordinates should be measured directly from your SVG floor plan
+// Convert SVG coordinates to GPS coordinates (for routes)
+export const svgToGps = (x, y) => {
+  // Calculate the scale factor
+  const latRange = BUILDING_BOUNDS.northEast.lat - BUILDING_BOUNDS.southWest.lat;
+  const lngRange = BUILDING_BOUNDS.northEast.lng - BUILDING_BOUNDS.southWest.lng;
+  
+  const svgLatScale = SVG_CONFIG.height / latRange;
+  const svgLngScale = SVG_CONFIG.width / lngRange;
+  
+  // Calculate offset from reference point in SVG
+  const svgXOffset = x - REFERENCE_POINTS.svg[0];
+  const svgYOffset = y - REFERENCE_POINTS.svg[1];
+  
+  // Convert to GPS offset
+  const lngOffset = svgXOffset / svgLngScale;
+  const latOffset = -svgYOffset / svgLatScale; // Negative because Y is inverted
+  
+  // Calculate final GPS coordinates
+  const lat = REFERENCE_POINTS.gps[0] + latOffset;
+  const lng = REFERENCE_POINTS.gps[1] + lngOffset;
+  
+  return [lat, lng];
+};
+
+// ROUTES with both GPS and SVG coordinates
 export const routes = {
   'A1': [
-    { coords: svgToLatLng(235.238, 110.773), instruction: "Starting point at entrance", svgCoords: {x: 235.238, y: 110.773} },
-    { coords: svgToLatLng(236.491, 79.910), instruction: "Walk towards corridor & take right turn", svgCoords: {x: 236.491, y: 79.910} },
-    { coords: svgToLatLng(246.949, 78.878), instruction: "Continue straight then turn right", svgCoords: {x: 246.949, y: 78.878} },
-    { coords: svgToLatLng(246.850, 146.939), instruction: "Walk straight & take left turn", svgCoords: {x: 246.850, y: 146.939} },
-    { coords: svgToLatLng(350.813, 146.665), instruction: "You've reached Cabinet A1", svgCoords: {x: 350.813, y: 146.665} }
+    { 
+      coords: [28.4590, 77.0260], 
+      svgCoords: { x: 235.238, y: 110.773 },
+      instruction: "Starting point at entrance"
+    },
+    { 
+      coords: svgToGps(236.491, 79.910),
+      svgCoords: { x: 236.491, y: 79.910 },
+      instruction: "Walk towards corridor & take right turn"
+    },
+    { 
+      coords: svgToGps(246.949, 78.878),
+      svgCoords: { x: 246.949, y: 78.878 },
+      instruction: "Continue straight then turn right"
+    },
+    { 
+      coords: svgToGps(246.850, 146.939),
+      svgCoords: { x: 246.850, y: 146.939 },
+      instruction: "Walk straight & take left turn"
+    },
+    { 
+      coords: svgToGps(350.813, 146.665),
+      svgCoords: { x: 350.813, y: 146.665 },
+      instruction: "You've reached Cabinet A1"
+    }
   ],
   
   'B2': [
-    // Start from entrance - you should measure this from your actual SVG
-    { coords: svgToLatLng(100, 300), instruction: "Start from main entrance", svgCoords: {x: 100, y: 300} },
-    { coords: svgToLatLng(150, 300), instruction: "Walk towards reception area", svgCoords: {x: 150, y: 300} },
-    { coords: svgToLatLng(300, 300), instruction: "Continue past reception", svgCoords: {x: 300, y: 300} },
-    { coords: svgToLatLng(300, 200), instruction: "Turn left towards Zone B", svgCoords: {x: 300, y: 200} },
-    { coords: svgToLatLng(400, 200), instruction: "Walk down Zone B corridor", svgCoords: {x: 400, y: 200} },
-    { coords: svgToLatLng(400, 150), instruction: "Turn right to cabinet area", svgCoords: {x: 400, y: 150} },
-    { coords: svgToLatLng(450, 150), instruction: "Cabinet B2 reached!", svgCoords: {x: 450, y: 150} }
+    { 
+      coords: [28.4590, 77.0260], 
+      svgCoords: { x: 235.238, y: 110.773 },
+      instruction: "Start from main entrance"
+    },
+    { 
+      coords: svgToGps(300, 100),
+      svgCoords: { x: 300, y: 100 },
+      instruction: "Walk towards reception area"
+    },
+    { 
+      coords: svgToGps(400, 150),
+      svgCoords: { x: 400, y: 150 },
+      instruction: "Continue past reception"
+    },
+    { 
+      coords: svgToGps(500, 200),
+      svgCoords: { x: 500, y: 200 },
+      instruction: "Turn left towards Zone B"
+    },
+    { 
+      coords: svgToGps(600, 180),
+      svgCoords: { x: 600, y: 180 },
+      instruction: "Cabinet B2 reached!"
+    }
   ],
   
   'C3': [
-    // Start from entrance
-    { coords: svgToLatLng(100, 300), instruction: "Start from main entrance", svgCoords: {x: 100, y: 300} },
-    { coords: svgToLatLng(200, 300), instruction: "Walk through main hall", svgCoords: {x: 200, y: 300} },
-    { coords: svgToLatLng(500, 300), instruction: "Continue towards far end", svgCoords: {x: 500, y: 300} },
-    { coords: svgToLatLng(600, 300), instruction: "Turn left towards Zone C", svgCoords: {x: 600, y: 300} },
-    { coords: svgToLatLng(600, 200), instruction: "Walk up Zone C corridor", svgCoords: {x: 600, y: 200} },
-    { coords: svgToLatLng(650, 150), instruction: "Turn right to cabinet", svgCoords: {x: 650, y: 150} },
-    { coords: svgToLatLng(700, 100), instruction: "Cabinet C3 reached!", svgCoords: {x: 700, y: 100} }
+    { 
+      coords: [28.4590, 77.0260], 
+      svgCoords: { x: 235.238, y: 110.773 },
+      instruction: "Start from main entrance"
+    },
+    { 
+      coords: svgToGps(400, 200),
+      svgCoords: { x: 400, y: 200 },
+      instruction: "Walk through main hall"
+    },
+    { 
+      coords: svgToGps(600, 150),
+      svgCoords: { x: 600, y: 150 },
+      instruction: "Continue towards far end"
+    },
+    { 
+      coords: svgToGps(700, 100),
+      svgCoords: { x: 700, y: 100 },
+      instruction: "Cabinet C3 reached!"
+    }
   ]
 };
 
-// Export route coordinates for polylines
+// Export route coordinates for Leaflet (GPS coordinates)
 export const getRouteCoords = (cabinetId) => {
   const route = routes[cabinetId];
   return route ? route.map(point => point.coords) : [];
@@ -95,13 +165,61 @@ export const getRouteCoords = (cabinetId) => {
 // Export route with instructions
 export const getRoute = (cabinetId) => routes[cabinetId];
 
-// Get SVG coordinates for debugging
+// Export SVG coordinates for SVG overlay
 export const getRouteSvgCoords = (cabinetId) => {
   const route = routes[cabinetId];
   return route ? route.map(point => point.svgCoords) : [];
 };
 
-// Calculate route distance using Haversine formula
+// Validate SVG coordinates are within bounds
+export const validateSvgCoordinates = (x, y) => {
+  return x >= 0 && x <= SVG_CONFIG.width && y >= 0 && y <= SVG_CONFIG.height;
+};
+
+// Find closest point on route to user position
+export const findClosestRoutePoint = (userPosition, cabinetId) => {
+  const routeCoords = getRouteCoords(cabinetId);
+  if (!userPosition || !routeCoords.length) return null;
+  
+  let closestIndex = 0;
+  let closestDistance = Infinity;
+  
+  routeCoords.forEach((coord, index) => {
+    const distance = haversineDistance(
+      userPosition[0], userPosition[1],
+      coord[0], coord[1]
+    );
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+  });
+  
+  return {
+    index: closestIndex,
+    distance: closestDistance,
+    coords: routeCoords[closestIndex],
+    progress: (closestIndex / (routeCoords.length - 1)) * 100
+  };
+};
+
+// Get next instruction based on user position
+export const getNextInstruction = (userPosition, cabinetId) => {
+  const route = getRoute(cabinetId);
+  const closest = findClosestRoutePoint(userPosition, cabinetId);
+  
+  if (!route || !closest) return null;
+  
+  const nextIndex = Math.min(closest.index + 1, route.length - 1);
+  return {
+    current: route[closest.index],
+    next: route[nextIndex],
+    progress: closest.progress,
+    distanceToNext: closest.distance
+  };
+};
+
+// Calculate route distance
 export const getRouteDistance = (cabinetId) => {
   const routeCoords = getRouteCoords(cabinetId);
   if (routeCoords.length < 2) return 0;
@@ -132,44 +250,22 @@ const haversineDistance = (lat1, lng1, lat2, lng2) => {
   return R * c;
 };
 
-// Utility function to validate coordinates are within SVG bounds
-export const validateSvgCoordinates = (x, y) => {
-  return x >= 0 && x <= SVG_CONFIG.width && y >= 0 && y <= SVG_CONFIG.height;
-};
-
 // Debug function to test coordinate conversion
 export const debugCoordinateConversion = () => {
-  console.log('=== Coordinate Conversion Debug ===');
-  console.log('SVG Config:', SVG_CONFIG);
-  console.log('Building Bounds:', BUILDING_BOUNDS);
-  console.log('Building Center:', BUILDING_CENTER);
+  console.log('=== GPS to SVG Coordinate Debug ===');
+  console.log('Reference GPS:', REFERENCE_POINTS.gps);
+  console.log('Reference SVG:', REFERENCE_POINTS.svg);
   
-  // Test corner conversions
-  const corners = [
-    { name: 'Top-Left', svg: { x: 0, y: 0 } },
-    { name: 'Top-Right', svg: { x: SVG_CONFIG.width, y: 0 } },
-    { name: 'Bottom-Left', svg: { x: 0, y: SVG_CONFIG.height } },
-    { name: 'Bottom-Right', svg: { x: SVG_CONFIG.width, y: SVG_CONFIG.height } },
-    { name: 'Center', svg: { x: SVG_CONFIG.width/2, y: SVG_CONFIG.height/2 } }
-  ];
+  // Test the reference point conversion
+  const testSvg = gpsToSvg(REFERENCE_POINTS.gps[0], REFERENCE_POINTS.gps[1]);
+  const testGps = svgToGps(REFERENCE_POINTS.svg[0], REFERENCE_POINTS.svg[1]);
   
-  corners.forEach(corner => {
-    const latLng = svgToLatLng(corner.svg.x, corner.svg.y);
-    const backToSvg = latLngToSvg(latLng[0], latLng[1]);
-    console.log(`${corner.name}:`, {
-      original: corner.svg,
-      latLng: latLng,
-      backToSvg: backToSvg,
-      isValid: validateSvgCoordinates(corner.svg.x, corner.svg.y)
-    });
-  });
+  console.log('Reference point test:');
+  console.log('  GPS->SVG:', testSvg, '(should match reference SVG)');
+  console.log('  SVG->GPS:', testGps, '(should match reference GPS)');
   
-  // Test route coordinates
-  Object.entries(routes).forEach(([cabinetId, route]) => {
-    console.log(`\nRoute ${cabinetId}:`);
-    route.forEach((point, index) => {
-      const isValid = validateSvgCoordinates(point.svgCoords.x, point.svgCoords.y);
-      console.log(`  Step ${index + 1}: SVG(${point.svgCoords.x}, ${point.svgCoords.y}) -> LatLng(${point.coords[0].toFixed(6)}, ${point.coords[1].toFixed(6)}) Valid: ${isValid}`);
-    });
-  });
+  // Test your specific coordinate
+  const yourGps = [28.4590, 77.0260];
+  const yourSvg = gpsToSvg(yourGps[0], yourGps[1]);
+  console.log(`GPS ${yourGps} maps to SVG:`, yourSvg);
 };

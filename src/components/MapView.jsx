@@ -1,76 +1,127 @@
-// src/components/MapView.jsx - Updated for React-Leaflet
+// src/components/MapView.jsx - Simplified
 import React, { useState } from 'react';
 import { ArrowLeft, Navigation, Eye } from 'lucide-react';
-import LeafletMap from './LeafletMap';
+import UserPointer from './UserPointer';
+import useGPS from '../hooks/useGPS';
 import { cabinets } from '../data/cabinet';
-import { getRouteCoords } from '../data/routes';
+import { getRouteSvgCoords } from '../data/routes';
 
 const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
-  const [showRoute, setShowRoute] = useState(false);
+  const [showRoute, setShowRoute] = useState(true);
 
-  const routeCoords = getRouteCoords(selectedCabinet);
+  const { svgPosition, isTracking, startTracking } = useGPS();
+  const routeSvgCoords = getRouteSvgCoords(selectedCabinet);
   const cabinet = cabinets[selectedCabinet];
-  const cabinetLocation = cabinet?.coords;
+
+  const handleToggleRoute = () => {
+    setShowRoute(!showRoute);
+  };
+
+  const handleStartTracking = async () => {
+    if (!isTracking) {
+      try {
+        await startTracking();
+      } catch (err) {
+        console.error('Failed to start tracking:', err);
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-800">
-            <ArrowLeft size={20} />
-            Back
-          </button>
-          
-          <h1 className="text-xl font-semibold">
-            Route to {cabinet?.name}
-          </h1>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowRoute(!showRoute)}
-              className={`flex items-center gap-2 px-4 py-2 rounded ${
-                showRoute ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-              }`}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-6xl mx-auto p-4">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={onBack} 
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
             >
-              <Eye size={16} />
-              {showRoute ? 'Hide Route' : 'Show Route'}
+              <ArrowLeft size={20} />
+              Back
             </button>
             
-            <button
-              onClick={onStartNavigation}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              <Navigation size={16} />
-              Start Navigation
-            </button>
+            <h1 className="text-xl font-semibold text-gray-800">
+              {cabinet?.name}
+            </h1>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={handleToggleRoute}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
+                  showRoute 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                <Eye size={16} />
+                Route
+              </button>
+              
+              <button
+                onClick={onStartNavigation}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
+              >
+                <Navigation size={16} />
+                Navigate
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Map Container */}
-      <div className="p-4">
-        <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-          <div style={{ height: '70vh' }}>
-            <LeafletMap
-              showRoute={showRoute}
-              routeCoords={routeCoords}
-              cabinetLocation={cabinetLocation}
-              cabinetName={cabinet?.name}
-            />
+      {/* SVG Map */}
+      <div className="max-w-6xl mx-auto p-4">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="relative" style={{ height: '70vh' }}>
+            <svg
+              viewBox="0 0 815.4284 333.55614"
+              className="w-full h-full"
+              style={{ background: '#f8f9fa' }}
+              onClick={handleStartTracking}
+            >
+              {/* Floor Plan */}
+              <image
+                href="/floor.svg"
+                width="815.4284"
+                height="333.55614"
+                opacity="0.9"
+              />
+
+              {/* Route Path */}
+              {showRoute && routeSvgCoords && routeSvgCoords.length > 0 && (
+                <polyline
+                  points={routeSvgCoords.map(coord => `${coord.x},${coord.y}`).join(' ')}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="4"
+                  strokeDasharray="10,5"
+                  opacity="0.8"
+                />
+              )}
+
+              {/* Route Waypoints */}
+              {showRoute && routeSvgCoords && routeSvgCoords.map((coord, index) => (
+                <circle
+                  key={index}
+                  cx={coord.x}
+                  cy={coord.y}
+                  r={index === 0 || index === routeSvgCoords.length - 1 ? "8" : "6"}
+                  fill={index === 0 ? "#10b981" : index === routeSvgCoords.length - 1 ? "#ef4444" : "#3b82f6"}
+                  stroke="white"
+                  strokeWidth="2"
+                />
+              ))}
+
+              {/* User Position */}
+              {svgPosition && (
+                <UserPointer 
+                  position={svgPosition}
+                  isNavigating={isTracking}
+                />
+              )}
+            </svg>
           </div>
-        </div>
-      </div>
-      
-      {/* Instructions */}
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800">
-            {showRoute 
-              ? `Route displayed to ${cabinet?.name}. Click "Start Navigation" to begin live tracking.`
-              : `Click "Show Route" to view the path to ${cabinet?.name}.`
-            }
-          </p>
         </div>
       </div>
     </div>
