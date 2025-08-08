@@ -1,6 +1,6 @@
 // src/hooks/useGPS.js - Updated to provide both GPS and SVG coordinates
-import { useState, useEffect, useCallback } from 'react';
-import { BUILDING_BOUNDS, BUILDING_CENTER, gpsToSvg, validateSvgCoordinates } from '../data/routes';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { BUILDING_BOUNDS, SVG_CONFIG, REFERENCE_POINTS, gpsToSvg, validateSvgCoordinates } from '../data/routes';
 
 const useGPS = () => {
   const [position, setPosition] = useState(null); // GPS coordinates [lat, lng]
@@ -53,6 +53,13 @@ const useGPS = () => {
     });
   }, []);
 
+  // Rolling GPS samples for 3s averaging
+  const gpsSamplesRef = useRef([]); // [{ t: ms, lat, lng, acc }]
+  const SMOOTHING_WINDOW_MS = 3000;
+  // Offsite mapping calibration so movement still shows on SVG when outside building bounds
+  const offsiteCalibrationRef = useRef(null); // { baseGPS: {lat, lng}, baseSVG: {x, y} }
+  const METERS_TO_PIXELS = 0.8; // scale when offsite
+
   // Convert GPS to SVG coordinates
   const convertToSvgCoordinates = useCallback((lat, lng) => {
     const svgCoords = gpsToSvg(lat, lng);
@@ -68,6 +75,55 @@ const useGPS = () => {
     return svgCoords;
   }, []);
 
+  // Compute average of last 3 seconds of samples
+  const computeAveragedFix = useCallback((nowMs) => {
+    const cutoff = nowMs - SMOOTHING_WINDOW_MS;
+    // prune old samples
+    gpsSamplesRef.current = gpsSamplesRef.current.filter(s => s.t >= cutoff);
+    const n = gpsSamplesRef.current.length;
+    if (n === 0) return null;
+    const sum = gpsSamplesRef.current.reduce((acc, s) => {
+      acc.lat += s.lat;
+      acc.lng += s.lng;
+      if (typeof s.acc === 'number') acc.accSum += s.acc;
+      acc.countAcc += typeof s.acc === 'number' ? 1 : 0;
+      return acc;
+    }, { lat: 0, lng: 0, accSum: 0, countAcc: 0 });
+    return {
+      lat: sum.lat / n,
+      lng: sum.lng / n,
+      accuracy: sum.countAcc > 0 ? (sum.accSum / sum.countAcc) : null,
+      samples: n
+    };
+  }, []);
+  
+  // Convert GPS to SVG when user is outside building bounds by anchoring to SVG center
+  const convertOffsiteToSvg = useCallback((lat, lng) => {
+    if (!offsiteCalibrationRef.current) {
+      offsiteCalibrationRef.current = {
+        baseGPS: { lat, lng },
+        // Anchor to the known START point on the SVG (cabinet A1 start)
+        baseSVG: { x: REFERENCE_POINTS.svg[0], y: REFERENCE_POINTS.svg[1] }
+      };
+    }
+    const { baseGPS, baseSVG } = offsiteCalibrationRef.current;
+
+    const meanLatRad = ((lat + baseGPS.lat) / 2) * Math.PI / 180;
+    const metersPerDegLat = 111_132;
+    const metersPerDegLng = 111_320 * Math.cos(meanLatRad);
+
+    const deltaLatMeters = (lat - baseGPS.lat) * metersPerDegLat;
+    const deltaLngMeters = (lng - baseGPS.lng) * metersPerDegLng;
+
+    let x = baseSVG.x + (deltaLngMeters * METERS_TO_PIXELS);
+    let y = baseSVG.y - (deltaLatMeters * METERS_TO_PIXELS);
+
+    x = Math.max(0, Math.min(SVG_CONFIG.width, x));
+    y = Math.max(0, Math.min(SVG_CONFIG.height, y));
+
+    return { x, y };
+  }, []);
+
   // Check if coordinates are within building bounds
   const isWithinBuilding = useCallback((lat, lng) => {
     return lat >= BUILDING_BOUNDS.southWest.lat && 
@@ -75,6 +131,60 @@ const useGPS = () => {
            lng >= BUILDING_BOUNDS.southWest.lng && 
            lng <= BUILDING_BOUNDS.northEast.lng;
   }, []);
+
+  // Simulated tracking for demo (move above to satisfy dependency ordering)
+  const startSimulatedTracking = useCallback(() => {
+    console.log('🎭 Starting simulated GPS tracking from reference point');
+    
+    // Start at your reference point: GPS [28.4590, 77.0260] -> SVG [235.238, 110.773]
+    let currentPos = [28.4590, 77.0260];
+    
+    // feed initial sample into buffer and compute average
+    const now0 = Date.now();
+    gpsSamplesRef.current.push({ t: now0, lat: currentPos[0], lng: currentPos[1], acc: 5 });
+    const avg0 = computeAveragedFix(now0) || { lat: currentPos[0], lng: currentPos[1], accuracy: 5 };
+
+    setPosition([avg0.lat, avg0.lng]);
+    setSvgPosition({ x: 235.238, y: 110.773 });
+    setAccuracy(avg0.accuracy ?? 5);
+    setIsTracking(true);
+    setError(null);
+
+    // Simulate movement every 3 seconds
+    const interval = setInterval(() => {
+      // Small random movement (about 1-2 meters)
+      const latOffset = (Math.random() - 0.5) * 0.00002;
+      const lngOffset = (Math.random() - 0.5) * 0.00002;
+      
+      currentPos = [
+        Math.max(BUILDING_BOUNDS.southWest.lat, 
+          Math.min(BUILDING_BOUNDS.northEast.lat, currentPos[0] + latOffset)),
+        Math.max(BUILDING_BOUNDS.southWest.lng, 
+          Math.min(BUILDING_BOUNDS.northEast.lng, currentPos[1] + lngOffset))
+      ];
+      
+      // sample -> average
+      const now = Date.now();
+      const simAcc = Math.random() * 10 + 3;
+      gpsSamplesRef.current.push({ t: now, lat: currentPos[0], lng: currentPos[1], acc: simAcc });
+      const averaged = computeAveragedFix(now) || { lat: currentPos[0], lng: currentPos[1], accuracy: simAcc };
+
+      setPosition([averaged.lat, averaged.lng]);
+      
+      // Convert to SVG coordinates using averaged coords
+      const svgCoords = convertToSvgCoordinates(averaged.lat, averaged.lng);
+      setSvgPosition(svgCoords);
+      setAccuracy(averaged.accuracy ?? simAcc);
+      
+      console.log('🎭 Simulated GPS Update (avg 3s):', {
+        gps: { lat: averaged.lat, lng: averaged.lng },
+        svg: svgCoords,
+        timestamp: new Date().toISOString()
+      });
+    }, 3000);
+
+    setWatchId(interval);
+  }, [convertToSvgCoordinates, computeAveragedFix]);
 
   // Start GPS tracking
   const startTracking = useCallback(async () => {
@@ -104,21 +214,29 @@ const useGPS = () => {
       const id = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude, accuracy: posAccuracy } = position.coords;
-          
-          // Update GPS position
-          setPosition([latitude, longitude]);
-          setAccuracy(posAccuracy);
+          const now = Date.now();
+          // push sample and compute 3s average
+          gpsSamplesRef.current.push({ t: now, lat: latitude, lng: longitude, acc: posAccuracy });
+          const averaged = computeAveragedFix(now) || { lat: latitude, lng: longitude, accuracy: posAccuracy, samples: 1 };
+
+          // Update GPS position (averaged)
+          setPosition([averaged.lat, averaged.lng]);
+          setAccuracy(averaged.accuracy ?? posAccuracy);
           setError(null);
           
-          // Convert to SVG coordinates for display
-          const svgCoords = convertToSvgCoordinates(latitude, longitude);
+          // Convert to SVG coordinates for display using averaged coords
+          const within = isWithinBuilding(averaged.lat, averaged.lng);
+          const svgCoords = within
+            ? (offsiteCalibrationRef.current = null, convertToSvgCoordinates(averaged.lat, averaged.lng))
+            : convertOffsiteToSvg(averaged.lat, averaged.lng);
           setSvgPosition(svgCoords);
           
-          console.log('🛰️ GPS Update:', {
-            gps: { lat: latitude, lng: longitude },
+          console.log('🛰️ GPS Update (avg 3s):', {
+            gps: { lat: averaged.lat, lng: averaged.lng },
             svg: svgCoords,
-            accuracy: posAccuracy,
-            withinBuilding: isWithinBuilding(latitude, longitude),
+            accuracy: averaged.accuracy ?? posAccuracy,
+            samples: averaged.samples,
+            withinBuilding: within,
             timestamp: new Date().toISOString()
           });
         },
@@ -149,7 +267,7 @@ const useGPS = () => {
         startSimulatedTracking();
       }
     }
-  }, [checkPermission, requestPermission, convertToSvgCoordinates, isWithinBuilding]);
+  }, [checkPermission, requestPermission, convertToSvgCoordinates, convertOffsiteToSvg, isWithinBuilding, computeAveragedFix, startSimulatedTracking]);
 
   // Stop GPS tracking
   const stopTracking = useCallback(() => {
@@ -167,52 +285,13 @@ const useGPS = () => {
     setSvgPosition(null);
     setAccuracy(null);
     setError(null);
+    gpsSamplesRef.current = [];
+    offsiteCalibrationRef.current = null;
     
     console.log('🛑 GPS tracking stopped');
   }, [watchId]);
 
-  // Simulated tracking for demo
-  const startSimulatedTracking = useCallback(() => {
-    console.log('🎭 Starting simulated GPS tracking from reference point');
-    
-    // Start at your reference point: GPS [28.4590, 77.0260] -> SVG [235.238, 110.773]
-    let currentPos = [28.4590, 77.0260];
-    
-    setPosition(currentPos);
-    setSvgPosition({ x: 235.238, y: 110.773 });
-    setAccuracy(5);
-    setIsTracking(true);
-    setError(null);
-
-    // Simulate movement every 3 seconds
-    const interval = setInterval(() => {
-      // Small random movement (about 1-2 meters)
-      const latOffset = (Math.random() - 0.5) * 0.00002;
-      const lngOffset = (Math.random() - 0.5) * 0.00002;
-      
-      currentPos = [
-        Math.max(BUILDING_BOUNDS.southWest.lat, 
-          Math.min(BUILDING_BOUNDS.northEast.lat, currentPos[0] + latOffset)),
-        Math.max(BUILDING_BOUNDS.southWest.lng, 
-          Math.min(BUILDING_BOUNDS.northEast.lng, currentPos[1] + lngOffset))
-      ];
-      
-      setPosition([...currentPos]);
-      
-      // Convert to SVG coordinates
-      const svgCoords = convertToSvgCoordinates(currentPos[0], currentPos[1]);
-      setSvgPosition(svgCoords);
-      setAccuracy(Math.random() * 10 + 3); // 3-13m accuracy
-      
-      console.log('🎭 Simulated GPS Update:', {
-        gps: { lat: currentPos[0], lng: currentPos[1] },
-        svg: svgCoords,
-        timestamp: new Date().toISOString()
-      });
-    }, 3000);
-
-    setWatchId(interval);
-  }, [convertToSvgCoordinates]);
+  // (moved earlier)
 
   // Get current position once
   const getCurrentPosition = useCallback(() => {
