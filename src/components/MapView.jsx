@@ -4,7 +4,7 @@ import { ArrowLeft, Navigation, Eye, MapPin, Route, Zap, Clock, Target, Loader }
 import UserPointer from './UserPointer';
 import useGPS from '../hooks/useGPS';
 import { cabinets, getDistanceToCabinet } from '../data/cabinet';
-import { getRouteSvgCoords, getRoute, getRouteDistance } from '../data/routes';
+import { getRouteSvgCoords, getRoute } from '../data/routes';
 
 const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
   const [showRoute, setShowRoute] = useState(true);
@@ -20,8 +20,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
     accuracy,
     startTracking,
     stopTracking,
-    getCurrentPosition,
-    checkPermission,
+    
     isWithinBuilding
   } = useGPS();
 
@@ -92,7 +91,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <button 
               onClick={onBack} 
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -101,14 +100,14 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
               Back to Cabinets
             </button>
             
-            <div className="text-center">
-              <h1 className="text-xl font-semibold text-gray-800">
+            <div className="text-center flex-1 min-w-[220px]">
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-800">
                 Route to {cabinet?.name}
               </h1>
               <p className="text-sm text-gray-500">{cabinet?.description}</p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap justify-end">
               <button
                 onClick={handleToggleRoute}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
@@ -162,7 +161,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
 
       {/* GPS Status Panel */}
       <div className="max-w-6xl mx-auto p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           {/* Live GPS Status */}
           <div className={`rounded-lg p-4 shadow-sm border ${
             svgPosition ? 'bg-green-50 border-green-200' : 
@@ -274,9 +273,9 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
       </div>
 
       {/* SVG MAP CONTAINER - THIS IS YOUR MAIN MAP */}
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-          <div className="relative" style={{ height: '70vh' }}>
+          <div className="relative" style={{ height: '60vh' }}>
             <svg
               viewBox="0 0 815.4284 333.55614"
               className="w-full h-full"
@@ -384,7 +383,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
 
       {/* Route Instructions */}
       {showRoute && route && route.length > 0 && (
-        <div className="max-w-6xl mx-auto px-4 mt-4">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 mt-4">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Route size={20} className="text-blue-600" />
@@ -418,7 +417,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
       )}
 
       {/* Action Instructions */}
-      <div className="max-w-6xl mx-auto px-4 py-4">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4">
         <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <Zap className="text-blue-600" size={24} />

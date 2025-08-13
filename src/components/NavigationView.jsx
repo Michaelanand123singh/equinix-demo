@@ -117,7 +117,7 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <div className="bg-gray-800 p-4">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
+        <div className="flex items-center justify-between gap-3 flex-wrap max-w-6xl mx-auto">
           <button 
             onClick={onBack} 
             className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
@@ -126,9 +126,9 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
             Back to Map
           </button>
           
-          <div className="text-center">
-            <h1 className="text-lg font-semibold">Navigating to</h1>
-            <p className="text-blue-400">{cabinet?.name}</p>
+          <div className="text-center flex-1 min-w-[200px]">
+            <h1 className="text-base sm:text-lg font-semibold">Navigating to</h1>
+            <p className="text-blue-400 break-words">{cabinet?.name}</p>
           </div>
           
           <button
@@ -206,9 +206,9 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
       </div>
 
       {/* Map Container */}
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <div className="max-w-6xl mx-auto bg-white rounded-lg overflow-hidden">
-          <div style={{ height: '60vh' }}>
+          <div style={{ height: '55vh' }}>
             <LeafletMap
               showRoute={true}
               routeCoords={routeCoords}
@@ -225,7 +225,7 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
 
       {/* Current Instruction */}
       {isNavigating && currentInstruction && (
-        <div className="max-w-6xl mx-auto px-4 mb-4">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 mb-4">
           <div className="bg-blue-600 rounded-lg p-4">
             <h3 className="font-semibold mb-2 flex items-center gap-2">
               <Target size={16} />
@@ -244,7 +244,7 @@ const NavigationView = ({ selectedCabinet, onBack }) => {
       )}
 
       {/* Status */}
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4">
         <div className="bg-gray-800 rounded-lg p-4">
           <div className="flex items-center gap-4">
             <div className={`p-2 rounded-full ${
