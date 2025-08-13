@@ -55,10 +55,10 @@ const useGPS = () => {
 
   // Rolling GPS samples for 3s averaging
   const gpsSamplesRef = useRef([]); // [{ t: ms, lat, lng, acc }]
-  const SMOOTHING_WINDOW_MS = 3000;
+  const SMOOTHING_WINDOW_MS = 800;
   // Offsite mapping calibration so movement still shows on SVG when outside building bounds
   const offsiteCalibrationRef = useRef(null); // { baseGPS: {lat, lng}, baseSVG: {x, y} }
-  const METERS_TO_PIXELS = 0.8; // scale when offsite
+  const METERS_TO_PIXELS = 2.0; // increase scale when offsite so 1m is more visible
 
   // Convert GPS to SVG coordinates
   const convertToSvgCoordinates = useCallback((lat, lng) => {
@@ -150,7 +150,7 @@ const useGPS = () => {
     setIsTracking(true);
     setError(null);
 
-    // Simulate movement every 3 seconds
+    // Simulate movement every 1 second
     const interval = setInterval(() => {
       // Small random movement (about 1-2 meters)
       const latOffset = (Math.random() - 0.5) * 0.00002;
@@ -181,7 +181,7 @@ const useGPS = () => {
         svg: svgCoords,
         timestamp: new Date().toISOString()
       });
-    }, 3000);
+    }, 1000);
 
     setWatchId(interval);
   }, [convertToSvgCoordinates, computeAveragedFix]);
@@ -208,7 +208,7 @@ const useGPS = () => {
       const options = {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 1000
+        maximumAge: 0
       };
 
       const id = navigator.geolocation.watchPosition(

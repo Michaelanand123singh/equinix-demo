@@ -1,12 +1,12 @@
 // src/components/MapView.jsx - SVG Map with Live GPS Pointer
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Navigation, Eye, MapPin, Route, Zap, Clock, Target, Loader } from 'lucide-react';
+import { ArrowLeft, Eye, MapPin, Route, Zap, Clock, Target, Loader } from 'lucide-react';
 import UserPointer from './UserPointer';
 import useGPS from '../hooks/useGPS';
 import { cabinets, getDistanceToCabinet } from '../data/cabinet';
 import { getRouteSvgCoords, getRoute } from '../data/routes';
 
-const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
+const MapView = ({ selectedCabinet, onBack }) => {
   const [showRoute, setShowRoute] = useState(true);
   const [isLiveTracking, setIsLiveTracking] = useState(false);
   const [cabinetDistance, setCabinetDistance] = useState(null);
@@ -68,9 +68,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
     }
   };
 
-  const handleStartNavigation = () => {
-    onStartNavigation();
-  };
+  
 
   const formatDistance = (distance) => {
     if (!distance) return 'Unknown';
@@ -147,13 +145,7 @@ const MapView = ({ selectedCabinet, onStartNavigation, onBack }) => {
                 )}
               </button>
               
-              <button
-                onClick={handleStartNavigation}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium shadow-sm"
-              >
-                <Navigation size={16} />
-                Navigate
-              </button>
+              
             </div>
           </div>
         </div>

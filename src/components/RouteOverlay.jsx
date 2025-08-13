@@ -55,16 +55,7 @@ const RouteOverlay = ({ selectedCabinet }) => {
         ))}
         
         {/* Start label */}
-        <text
-          x={routePoints[0].x}
-          y={routePoints[0].y - 15}
-          fontSize="12"
-          fill="#10b981"
-          textAnchor="middle"
-          fontWeight="bold"
-        >
-          START
-        </text>
+    
         
         {/* End label */}
         <text

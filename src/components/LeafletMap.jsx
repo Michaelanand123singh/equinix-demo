@@ -35,14 +35,14 @@ const createUserIcon = (isNavigating = false) => {
   return L.divIcon({
     className: 'user-location',
     html: `
-      <div style="position: relative; width: 50px; height: 50px;">
+      <div style="position: relative; width: 34px; height: 34px;">
         ${isNavigating ? `
         <div style="
           background: rgba(59, 130, 246, 0.3); 
           border: 2px solid rgba(59, 130, 246, 0.6);
           border-radius: 50%; 
-          width: 50px; 
-          height: 50px; 
+          width: 34px; 
+          height: 34px; 
           position: absolute;
           animation: pulse 2s infinite;
         "></div>
@@ -52,25 +52,25 @@ const createUserIcon = (isNavigating = false) => {
           background: #3b82f6; 
           border: 3px solid white; 
           border-radius: 50%; 
-          width: 20px; 
-          height: 20px; 
+          width: 14px; 
+          height: 14px; 
           position: absolute; 
-          top: 15px; 
-          left: 15px;
+          top: 10px; 
+          left: 10px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         "></div>
         
         <style>
           @keyframes pulse {
             0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.5); opacity: 0.4; }
-            100% { transform: scale(2); opacity: 0; }
+            50% { transform: scale(1.4); opacity: 0.4; }
+            100% { transform: scale(1.8); opacity: 0; }
           }
         </style>
       </div>
     `,
-    iconSize: [50, 50],
-    iconAnchor: [25, 25]
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
   });
 };
 

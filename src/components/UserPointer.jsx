@@ -19,27 +19,27 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
                 opacity: 0.8; 
               }
               50% { 
-                transform: scale(1.8); 
-                opacity: 0.3; 
+                transform: scale(1.5); 
+                opacity: 0.35; 
               }
               100% { 
-                transform: scale(2.5); 
+                transform: scale(2.0); 
                 opacity: 0; 
               }
             }
             
             @keyframes userGlow-${uniqueId} {
               0%, 100% { 
-                filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8));
+                filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.75));
               }
               50% { 
-                filter: drop-shadow(0 0 15px rgba(59, 130, 246, 1));
+                filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.95));
               }
             }
             
             @keyframes userBounce-${uniqueId} {
               0%, 100% { transform: translateY(0px); }
-              50% { transform: translateY(-2px); }
+              50% { transform: translateY(-1px); }
             }
             
             .user-pulse-${uniqueId} {
@@ -62,7 +62,7 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
         <circle
           cx={position.x}
           cy={position.y}
-          r={Math.min(Math.max(accuracy / 2, 10), 30)} // Scale accuracy to reasonable size
+          r={Math.min(Math.max(accuracy / 2, 6), 18)} // Scale accuracy to a smaller size
           fill="rgba(34, 197, 94, 0.15)"
           stroke="rgba(34, 197, 94, 0.5)"
           strokeWidth="1"
@@ -74,10 +74,10 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       <circle
         cx={position.x}
         cy={position.y}
-        r="25"
+        r="14"
         fill="rgba(59, 130, 246, 0.4)"
         stroke="rgba(59, 130, 246, 0.8)"
-        strokeWidth="2"
+        strokeWidth="1.5"
         className={isNavigating ? `user-pulse-${uniqueId}` : ''}
       />
 
@@ -85,10 +85,10 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       <circle
         cx={position.x}
         cy={position.y}
-        r="15"
+        r="9"
         fill="rgba(59, 130, 246, 0.8)"
         stroke="white"
-        strokeWidth="2"
+        strokeWidth="1.5"
         className={isNavigating ? `user-glow-${uniqueId}` : ''}
       />
 
@@ -96,10 +96,10 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       <circle
         cx={position.x}
         cy={position.y}
-        r="8"
+        r="5"
         fill="#1d4ed8"
         stroke="white"
-        strokeWidth="2"
+        strokeWidth="1.5"
         className={isNavigating ? `user-bounce-${uniqueId}` : ''}
         style={{
           filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
@@ -109,9 +109,9 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       {/* Live Status Indicator */}
       {isNavigating && (
         <circle
-          cx={position.x + 18}
-          cy={position.y - 18}
-          r="4"
+          cx={position.x + 12}
+          cy={position.y - 12}
+          r="3"
           fill="#10b981"
           stroke="white"
           strokeWidth="1"
@@ -122,7 +122,7 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       {/* Direction Arrow for Navigation */}
       {isNavigating && (
         <polygon
-          points={`${position.x},${position.y - 35} ${position.x - 5},${position.y - 25} ${position.x + 5},${position.y - 25}`}
+          points={`${position.x},${position.y - 22} ${position.x - 4},${position.y - 16} ${position.x + 4},${position.y - 16}`}
           fill="#1d4ed8"
           stroke="white"
           strokeWidth="1"
@@ -135,9 +135,9 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       {/* YOU Label */}
       <text
         x={position.x}
-        y={position.y - 40}
+        y={position.y - 26}
         textAnchor="middle"
-        fontSize="10"
+        fontSize="8"
         fontWeight="bold"
         fill="#1d4ed8"
         stroke="white"
@@ -151,9 +151,9 @@ const UserPointer = ({ position, isNavigating = false, accuracy = null }) => {
       {isNavigating && (
         <text
           x={position.x}
-          y={position.y + 45}
+          y={position.y + 30}
           textAnchor="middle"
-          fontSize="8"
+          fontSize="7"
           fontWeight="bold"
           fill="#10b981"
           stroke="white"
